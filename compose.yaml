@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-umrs_go_backend}
+      POSTGRES_USER: ${POSTGRES_USER:-umrs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  schema:
+    image: arigaio/atlas@sha256:5bd26b6ab9c12d0433fab9a0837bd2dca1d1ed2bec48dce8cc47e43e2756f3fc
+    working_dir: /work
+    environment:
+      ATLAS_DATABASE_URL: postgres://${POSTGRES_USER:-umrs}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-umrs_go_backend}?sslmode=disable&search_path=public
+      ATLAS_DEV_DATABASE_URL: postgres://${POSTGRES_USER:-umrs}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-umrs_go_backend}?sslmode=disable&search_path=public
+    volumes:
+      - .:/work
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - schema
+      - apply
+      - --env
+      - local
+      - --config
+      - file://atlas.hcl
+      - --auto-approve
+
+  seed:
+    image: postgres:18-alpine
+    working_dir: /work
+    volumes:
+      - .:/work
+    depends_on:
+      schema:
+        condition: service_completed_successfully
+    command:
+      - sh
+      - -ec
+      - psql "postgres://${POSTGRES_USER:-umrs}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-umrs_go_backend}?sslmode=disable" -v ON_ERROR_STOP=1 -f db/seed.sql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-8081}
+      DATABASE_URL: ${DATABASE_URL:-postgres://umrs:secret@postgres:5432/umrs_go_backend?sslmode=disable}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    ports:
+      - "${SERVER_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

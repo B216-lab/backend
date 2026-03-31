@@ -1,0 +1,40 @@
+name: Check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  go-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Format check
+        run: just fmt-check
+
+      - name: Test
+        run: just test
+
+      - name: Vet
+        run: just vet
+
+      - name: Build
+        run: just build

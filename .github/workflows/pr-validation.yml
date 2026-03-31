@@ -1,0 +1,11 @@
+name: PR Validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker-smoke:
+    uses: ./.github/workflows/reusable-docker-smoke.yml

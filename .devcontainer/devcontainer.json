@@ -1,0 +1,44 @@
+{
+  "name": "UMRS Go Backend",
+  "dockerComposeFile": [
+    "../compose.yaml",
+    "compose.devcontainer.yaml"
+  ],
+  "service": "dev",
+  "runServices": [
+    "postgres",
+    "dev"
+  ],
+  "workspaceFolder": "/workspace/backend",
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "go mod download && pre-commit install || true",
+  "forwardPorts": [
+    8081,
+    5432
+  ],
+  "portsAttributes": {
+    "8081": {
+      "label": "Go API"
+    },
+    "5432": {
+      "label": "PostgreSQL"
+    }
+  },
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go",
+        "ms-azuretools.vscode-docker",
+        "GitHub.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        "EditorConfig.EditorConfig",
+        "ms-python.python"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "go.useLanguageServer": true
+      }
+    }
+  }
+}

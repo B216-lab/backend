@@ -1,0 +1,20 @@
+name: Reusable Docker Smoke
+
+on:
+  workflow_call:
+
+jobs:
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      - name: Prepare env
+        run: cp .env.example .env
+
+      - name: Docker smoke
+        run: just docker-smoke

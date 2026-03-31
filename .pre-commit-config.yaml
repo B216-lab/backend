@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: just-fmt-check
+        name: just fmt-check
+        entry: just fmt-check
+        language: system
+        pass_filenames: false
+      - id: just-test
+        name: just test
+        entry: just test
+        language: system
+        pass_filenames: false
+      - id: just-vet
+        name: just vet
+        entry: just vet
+        language: system
+        pass_filenames: false
+      - id: just-build
+        name: just build
+        entry: just build
+        language: system
+        pass_filenames: false
