@@ -8,6 +8,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/backend ./cmd/api
 
 FROM alpine:3.22
+# hadolint ignore=DL3018
 RUN addgroup -S app && adduser -S app -G app \
     && apk add --no-cache ca-certificates tzdata
 
