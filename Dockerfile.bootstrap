@@ -1,0 +1,14 @@
+FROM arigaio/atlas@sha256:5bd26b6ab9c12d0433fab9a0837bd2dca1d1ed2bec48dce8cc47e43e2756f3fc AS atlas
+
+FROM postgres:18-alpine
+
+WORKDIR /work
+
+COPY --from=atlas /atlas /usr/local/bin/atlas
+COPY atlas.hcl ./atlas.hcl
+COPY db ./db
+COPY scripts/bootstrap.sh /usr/local/bin/bootstrap.sh
+
+RUN chmod +x /usr/local/bin/bootstrap.sh
+
+ENTRYPOINT ["/usr/local/bin/bootstrap.sh"]
