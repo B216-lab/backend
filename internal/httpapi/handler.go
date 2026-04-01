@@ -10,6 +10,7 @@ import (
 
 type SubmissionService interface {
 	Submit(ctx context.Context, in forms.SubmissionInput) (int, error)
+	ValidateRespondentKey(ctx context.Context, respondentKey string) (bool, error)
 }
 
 type Handler struct {
@@ -64,6 +65,48 @@ func (h *Handler) SubmitMovementsForm(w http.ResponseWriter, r *http.Request) {
 		"message":             forms.SuccessMessage,
 		"savedMovementsCount": savedCount,
 	})
+}
+
+func (h *Handler) ValidateRespondentKey(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+			"error":   "Method Not Allowed",
+			"message": "only GET is allowed",
+		})
+		return
+	}
+
+	respondentKey := r.URL.Query().Get("respondentKey")
+	if respondentKey == "" {
+		respondentKey = r.URL.Query().Get("key")
+	}
+
+	isValid, err := h.service.ValidateRespondentKey(r.Context(), respondentKey)
+	if err != nil {
+		if forms.IsValidationError(err) {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"error":   "Bad Request",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error":   "Internal Server Error",
+			"message": "failed to validate respondent key",
+		})
+		return
+	}
+
+	if !isValid {
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"error":   "Not Found",
+			"message": "respondent key was not found",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) Healthz(w http.ResponseWriter, _ *http.Request) {

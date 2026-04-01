@@ -33,6 +33,7 @@ type MovementInput struct {
 }
 
 type SubmissionInput struct {
+	RespondentKey    string          `json:"respondentKey"`
 	Birthday         string          `json:"birthday"`
 	Gender           string          `json:"gender"`
 	SocialStatus     string          `json:"socialStatus"`
@@ -65,6 +66,7 @@ type Movement struct {
 }
 
 type Submission struct {
+	RespondentKey    *string
 	Birthday         *time.Time
 	Gender           *string
 	SocialStatus     *string

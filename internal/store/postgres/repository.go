@@ -18,6 +18,20 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
+func (r *Repository) IsRespondentKeyAllowed(ctx context.Context, respondentKey string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(
+		ctx,
+		`SELECT EXISTS (SELECT 1 FROM allowed_respondent_keys WHERE respondent_key = $1)`,
+		respondentKey,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check respondent key: %w", err)
+	}
+
+	return exists, nil
+}
+
 func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {

@@ -7,13 +7,20 @@ import (
 )
 
 type fakeRepo struct {
-	captured Submission
-	count    int
+	captured     Submission
+	count        int
+	allowedKeys  map[string]bool
+	validatedKey string
 }
 
 func (r *fakeRepo) Submit(_ context.Context, in Submission) (int, error) {
 	r.captured = in
 	return r.count, nil
+}
+
+func (r *fakeRepo) IsRespondentKeyAllowed(_ context.Context, respondentKey string) (bool, error) {
+	r.validatedKey = respondentKey
+	return r.allowedKeys[respondentKey], nil
 }
 
 func TestSubmit_ShouldNormalizeAndPersist_WhenInputIsValid(t *testing.T) {
@@ -93,5 +100,79 @@ func TestSubmit_ShouldBuildGeoJSONFromCoordinates_WhenGeoJSONAbsent(t *testing.T
 	expected := `{"coordinates":[37.6173,55.7558],"type":"Point"}`
 	if geo != expected {
 		t.Fatalf("unexpected geojson, got %s", geo)
+	}
+}
+
+func TestSubmit_ShouldAllowAnonymousSubmission_WhenRespondentKeyMissing(t *testing.T) {
+	repo := &fakeRepo{count: 1}
+	service := NewService(repo)
+
+	_, err := service.Submit(context.Background(), SubmissionInput{
+		MovementsDate: "2026-04-01",
+		Movements: []MovementInput{{
+			MovementType:   "ON_FOOT",
+			DeparturePlace: "HOME_RESIDENCE",
+			ArrivalPlace:   "SCHOOL",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repo.validatedKey != "" {
+		t.Fatalf("expected respondent key validation to be skipped, got %q", repo.validatedKey)
+	}
+}
+
+func TestSubmit_ShouldRejectInvalidRespondentKey_WhenProvided(t *testing.T) {
+	repo := &fakeRepo{
+		allowedKeys: map[string]bool{},
+	}
+	service := NewService(repo)
+
+	_, err := service.Submit(context.Background(), SubmissionInput{
+		RespondentKey: "bad-key",
+		MovementsDate: "2026-04-01",
+		Movements: []MovementInput{{
+			MovementType:   "ON_FOOT",
+			DeparturePlace: "HOME_RESIDENCE",
+			ArrivalPlace:   "SCHOOL",
+		}},
+	})
+
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if !IsValidationError(err) {
+		t.Fatalf("expected validation error type, got %T", err)
+	}
+	if repo.validatedKey != "bad-key" {
+		t.Fatalf("expected validated key to be captured, got %q", repo.validatedKey)
+	}
+}
+
+func TestValidateRespondentKey_ShouldReturnTrue_WhenKeyAllowed(t *testing.T) {
+	repo := &fakeRepo{
+		allowedKeys: map[string]bool{"good-key": true},
+	}
+	service := NewService(repo)
+
+	isValid, err := service.ValidateRespondentKey(context.Background(), "good-key")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !isValid {
+		t.Fatal("expected key to be valid")
+	}
+}
+
+func TestValidateRespondentKey_ShouldRequireNonEmptyKey(t *testing.T) {
+	service := NewService(&fakeRepo{})
+
+	_, err := service.ValidateRespondentKey(context.Background(), "   ")
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if !IsValidationError(err) {
+		t.Fatalf("expected validation error type, got %T", err)
 	}
 }

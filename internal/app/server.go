@@ -10,6 +10,8 @@ import (
 func NewServer(handler *httpapi.Handler, allowedOrigins []string, port string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handler.Healthz)
+	mux.HandleFunc("/api/v1/public/forms/movements/respondent-keys/validate", handler.ValidateRespondentKey)
+	mux.HandleFunc("/v1/public/forms/movements/respondent-keys/validate", handler.ValidateRespondentKey)
 	mux.HandleFunc("/api/v1/public/forms/movements", handler.SubmitMovementsForm)
 	mux.HandleFunc("/v1/public/forms/movements", handler.SubmitMovementsForm)
 

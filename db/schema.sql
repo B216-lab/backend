@@ -28,6 +28,13 @@ CREATE TABLE ref_vehicle_type (
     description_ru VARCHAR(512) NOT NULL
 );
 
+CREATE TABLE allowed_respondent_keys (
+    id             BIGSERIAL PRIMARY KEY,
+    name           VARCHAR(255) NOT NULL,
+    respondent_key VARCHAR(255) NOT NULL UNIQUE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE movements_form_submissions (
     id                    BIGSERIAL PRIMARY KEY,
     birthday              DATE,
