@@ -2,6 +2,8 @@ name: Publish Docker images
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -56,6 +58,7 @@ jobs:
         with:
           images: ghcr.io/${{ env.GHCR_NAMESPACE }}/${{ github.event.repository.name }}
           tags: |
+            type=raw,value=main,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=raw,value=${{ inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
             type=sha
             type=ref,event=tag
@@ -67,6 +70,7 @@ jobs:
         with:
           images: ghcr.io/${{ env.GHCR_NAMESPACE }}/${{ github.event.repository.name }}-bootstrap
           tags: |
+            type=raw,value=main,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=raw,value=${{ inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
             type=sha
             type=ref,event=tag
