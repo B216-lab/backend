@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/B216-lab/backend/internal/forms"
@@ -81,8 +82,11 @@ func (h *Handler) ValidateRespondentKey(w http.ResponseWriter, r *http.Request) 
 		respondentKey = r.URL.Query().Get("key")
 	}
 
+	log.Printf("validate respondent key request: method=%s path=%s key=%q", r.Method, r.URL.Path, respondentKey)
+
 	isValid, err := h.service.ValidateRespondentKey(r.Context(), respondentKey)
 	if err != nil {
+		log.Printf("validate respondent key failed: key=%q err=%v", respondentKey, err)
 		if forms.IsValidationError(err) {
 			writeJSON(w, http.StatusBadRequest, map[string]any{
 				"error":   "Bad Request",
@@ -99,6 +103,7 @@ func (h *Handler) ValidateRespondentKey(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if !isValid {
+		log.Printf("validate respondent key not found: key=%q", respondentKey)
 		writeJSON(w, http.StatusNotFound, map[string]any{
 			"error":   "Not Found",
 			"message": "respondent key was not found",
@@ -106,6 +111,7 @@ func (h *Handler) ValidateRespondentKey(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	log.Printf("validate respondent key success: key=%q", respondentKey)
 	w.WriteHeader(http.StatusNoContent)
 }
 

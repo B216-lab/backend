@@ -1,0 +1,17 @@
+name: Publish to pre-prod
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: B216-lab/.github/.github/workflows/ssh-deploy.yml@main
+    with:
+      app_path: /opt/backend
+      service_name: app
+    secrets:
+      DEPLOY_HOST: ${{ secrets.PREPROD_HOST }}
+      DEPLOY_USERNAME: ${{ secrets.PREPROD_USERNAME }}
+      DEPLOY_KEY: ${{ secrets.PREPROD_KEY }}
+      DEPLOY_PORT: ${{ secrets.PREPROD_PORT }}
