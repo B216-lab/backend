@@ -89,9 +89,23 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 			home_readable_address,
 			movements_date
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		VALUES (
+			$1,
+			$2,
+			$3,
+			$4,
+			$5,
+			$6,
+			$7,
+			CASE
+				WHEN $8::text IS NULL THEN NULL
+				ELSE ST_SetSRID(ST_GeomFromGeoJSON($8::text), 4326)
+			END,
+			$9,
+			$10
+		)
 		RETURNING id
-	`, in.Birthday, in.Gender, socialStatusID, in.TransportCostMin, in.TransportCostMax, in.IncomeMin, in.IncomeMax, nullableJSON(in.HomeAddress.GeoJSON), nullableString(in.HomeAddress.Readable), in.MovementsDate).Scan(&submissionID)
+	`, in.Birthday, in.Gender, socialStatusID, in.TransportCostMin, in.TransportCostMax, in.IncomeMin, in.IncomeMax, nullableGeoJSONText(in.HomeAddress.GeoJSON), nullableString(in.HomeAddress.Readable), in.MovementsDate).Scan(&submissionID)
 	if err != nil {
 		return 0, fmt.Errorf("insert submission: %w", err)
 	}
@@ -139,13 +153,35 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 				comment,
 				movements_form_submission_id
 			)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+			VALUES (
+				$1,
+				$2,
+				$3,
+				CASE
+					WHEN $4::text IS NULL THEN NULL
+					ELSE ST_SetSRID(ST_GeomFromGeoJSON($4::text), 4326)
+				END,
+				CASE
+					WHEN $5::text IS NULL THEN NULL
+					ELSE ST_SetSRID(ST_GeomFromGeoJSON($5::text), 4326)
+				END,
+				$6,
+				$7,
+				$8,
+				$9,
+				$10,
+				$11,
+				$12,
+				$13,
+				$14,
+				$15
+			)
 		`,
 			movementTypeID,
 			movement.DepartureTime,
 			movement.DestinationTime,
-			nullableJSON(movement.DeparturePlace.GeoJSON),
-			nullableJSON(movement.DestinationPlace.GeoJSON),
+			nullableGeoJSONText(movement.DeparturePlace.GeoJSON),
+			nullableGeoJSONText(movement.DestinationPlace.GeoJSON),
 			nullableString(movement.DeparturePlace.Readable),
 			nullableString(movement.DestinationPlace.Readable),
 			departureTypeID,
@@ -200,9 +236,9 @@ func nullableString(value string) any {
 	return value
 }
 
-func nullableJSON(value []byte) any {
+func nullableGeoJSONText(value []byte) any {
 	if len(value) == 0 {
 		return nil
 	}
-	return value
+	return string(value)
 }

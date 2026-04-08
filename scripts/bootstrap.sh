@@ -39,6 +39,9 @@ until psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -c 'select 1' >/dev/null 2>&1; d
   sleep 2
 done
 
+echo "Ensuring PostGIS extension and geometry migration..."
+psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -f db/pre_schema.sql
+
 echo "Applying schema with Atlas..."
 atlas schema apply --env local --config file://atlas.hcl --auto-approve
 

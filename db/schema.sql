@@ -44,7 +44,7 @@ CREATE TABLE movements_form_submissions (
     transport_cost_max    INTEGER,
     income_min            INTEGER,
     income_max            INTEGER,
-    home_address          JSONB,
+    home_address          geometry(Point, 4326),
     home_readable_address VARCHAR(512),
     movements_date        DATE,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -55,8 +55,8 @@ CREATE TABLE movements (
     movement_type_id             BIGINT NOT NULL REFERENCES ref_movement_type (id),
     departure_time               TIMESTAMPTZ,
     destination_time             TIMESTAMPTZ,
-    departure_place              JSONB,
-    destination_place            JSONB,
+    departure_place              geometry(Point, 4326),
+    destination_place            geometry(Point, 4326),
     departure_place_address      VARCHAR(512),
     destination_place_address    VARCHAR(512),
     departure_place_type_id      BIGINT NOT NULL REFERENCES ref_place_type (id),
@@ -77,8 +77,20 @@ CREATE INDEX idx_movements_form_submissions_social_status_id
 CREATE INDEX idx_movements_form_submissions_created_at
     ON movements_form_submissions (created_at);
 
+CREATE INDEX idx_movements_form_submissions_home_address
+    ON movements_form_submissions
+    USING GIST (home_address);
+
 CREATE INDEX idx_movements_movements_form_submission_id
     ON movements (movements_form_submission_id);
 
 CREATE INDEX idx_movements_created_at
     ON movements (created_at);
+
+CREATE INDEX idx_movements_departure_place
+    ON movements
+    USING GIST (departure_place);
+
+CREATE INDEX idx_movements_destination_place
+    ON movements
+    USING GIST (destination_place);
