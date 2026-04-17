@@ -25,13 +25,16 @@ go mod download
 pre-commit install
 ```
 
-Atlas and Postgres CLI tooling run via pinned Docker images in this repository, so you do not need local installs for them.
+Goose and Postgres CLI tooling run via Docker in this repository, so you do not need local installs for them.
 
 ### Core Commands
 
 ```bash
-just schema-plan
-just schema-apply
+just migrate-status
+just migrate-up
+just migrate-down
+just migrate-redo
+just migrate-create add_new_feature
 just db-seed
 just db-bootstrap
 just fmt
@@ -50,22 +53,22 @@ curl --fail http://localhost:8081/healthz
 just down
 ```
 
-`just up` starts PostgreSQL, applies `db/schema.sql`, loads `db/seed.sql`, and then starts the API.
+`just up` starts PostgreSQL, applies Goose migrations, loads `db/seed.sql`, and then starts the API.
 
 ## Schema Workflow
 
-`db/schema.sql` is the schema source of truth.
-`db/seed.sql` contains idempotent reference data for bootstrapping an empty database.
+`db/migrations/` is the schema source of truth.
+Goose stores applied migration versions in the target database and skips versions that were already applied.
+`db/seed.sql` stays separate from migrations because it is rerunnable reference data, not schema history.
 
 Typical change flow:
 
-1. Edit `db/schema.sql`
-2. Start PostgreSQL if needed: `docker compose up -d postgres`
-3. Preview the plan: `just schema-plan`
-4. Apply the schema: `just schema-apply`
-5. Re-run reference data if needed: `just db-seed`
-
-This setup is intentionally optimized for the current stage: empty-database bootstrap and first deployment. If environments start to carry state that must evolve safely over time, that is the point where versioned migrations become worth reintroducing.
+1. Create a new migration: `just migrate-create add_new_feature`
+2. Edit the generated SQL migration in `db/migrations/`
+3. Start PostgreSQL if needed: `docker compose up -d postgres`
+4. Check migration state: `just migrate-status`
+5. Apply pending migrations: `just migrate-up`
+6. Re-run reference data if needed: `just db-seed`
 
 ### Docker Smoke Check
 

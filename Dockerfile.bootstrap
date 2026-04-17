@@ -1,11 +1,14 @@
-FROM arigaio/atlas@sha256:5bd26b6ab9c12d0433fab9a0837bd2dca1d1ed2bec48dce8cc47e43e2756f3fc AS atlas
+ARG GOOSE_VERSION=v3.27.0
+
+FROM golang:1.26-alpine AS goose-builder
+ARG GOOSE_VERSION
+RUN GOBIN=/out go install github.com/pressly/goose/v3/cmd/goose@${GOOSE_VERSION}
 
 FROM postgres:18-alpine
 
 WORKDIR /work
 
-COPY --from=atlas /atlas /usr/local/bin/atlas
-COPY atlas.hcl ./atlas.hcl
+COPY --from=goose-builder /out/goose /usr/local/bin/goose
 COPY db ./db
 COPY scripts/bootstrap.sh /usr/local/bin/bootstrap.sh
 

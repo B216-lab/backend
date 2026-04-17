@@ -3,21 +3,56 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 default:
   @just --list
 
-atlas *args:
-  bash ./scripts/atlas.sh {{args}}
+migrate *args:
+  bash ./scripts/goose.sh {{args}}
+
+migrate-status:
+  bash ./scripts/goose.sh status
+
+migrate-up:
+  bash ./scripts/goose.sh up
+
+migrate-up-by-one:
+  bash ./scripts/goose.sh up-by-one
+
+migrate-down:
+  bash ./scripts/goose.sh down
+
+migrate-redo:
+  bash ./scripts/goose.sh redo
+
+migrate-version:
+  bash ./scripts/goose.sh version
+
+migrate-create name:
+  bash ./scripts/goose.sh create {{name}} sql
 
 schema-plan:
-  bash ./scripts/atlas.sh schema apply --env local --config file://atlas.hcl --dry-run
+  @echo "Atlas schema plan was removed. Use `just migrate-status` with Goose."
 
 schema-apply:
-  bash ./scripts/atlas.sh schema apply --env local --config file://atlas.hcl --auto-approve
+  bash ./scripts/goose.sh up
 
 db-seed:
   bash ./scripts/seed.sh
 
+export-region region="custom-data/chelyabinsk_agglomeration.geojson" out_dir="exports/chelyabinsk_agglomeration" database_url="":
+  python3 ./scripts/export_region_data.py \
+    --region-geojson "{{region}}" \
+    --out-dir "{{out_dir}}" \
+    {{ if database_url != "" { "--database-url \"" + database_url + "\"" } else { "" } }}
+
+export-chelyabinsk:
+  just export-region
+
 db-bootstrap:
-  just schema-apply
-  just db-seed
+  docker compose up -d postgres
+  docker compose build bootstrap
+  docker compose run --rm bootstrap
+
+bootstrap:
+  docker compose build bootstrap
+  docker compose run --rm bootstrap
 
 fmt:
   gofmt -w $(find . -name '*.go' -type f | sort)

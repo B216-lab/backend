@@ -28,9 +28,9 @@
 
 ## 4. Persistence
 
-- `db/schema.sql` is the schema source of truth
-- Apply schema changes with Atlas `schema apply`
-- `db/seed.sql` contains idempotent reference data for empty-database bootstrap
+- `db/migrations/` is the schema source of truth
+- Apply schema changes with Goose versioned migrations
+- `db/seed.sql` contains idempotent reference data for bootstrap and reruns
 - Never change database manually to “fix” migration drift
 - Keep seed data idempotent (`ON CONFLICT` upserts)
 - Prefer transactions for multi-step writes
@@ -44,8 +44,9 @@
 ## 6. Build / Run
 
 - Local checks: `just check`
-- Preview schema changes: `just schema-plan`
-- Apply schema locally: `just schema-apply`
+- Check migration status locally: `just migrate-status`
+- Apply pending migrations locally: `just migrate-up`
+- Roll back one migration locally: `just migrate-down`
 - Seed reference data locally: `just db-seed`
 - Bootstrap empty local DB: `just db-bootstrap`
 - Start stack: `just up`

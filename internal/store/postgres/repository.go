@@ -22,7 +22,12 @@ func (r *Repository) IsRespondentKeyAllowed(ctx context.Context, respondentKey s
 	var exists bool
 	err := r.pool.QueryRow(
 		ctx,
-		`SELECT EXISTS (SELECT 1 FROM allowed_respondent_keys WHERE respondent_key = $1)`,
+		`SELECT EXISTS (
+			SELECT 1
+			FROM allowed_respondent_keys
+			WHERE respondent_key = $1
+			  AND is_active = TRUE
+		)`,
 		respondentKey,
 	).Scan(&exists)
 	if err != nil {
@@ -75,9 +80,18 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 		}
 	}
 
+	var allowedRespondentKeyID *int64
+	if in.RespondentKey != nil {
+		allowedRespondentKeyID, err = lookupActiveRespondentKeyID(ctx, tx, *in.RespondentKey)
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	var submissionID int64
 	err = tx.QueryRow(ctx, `
 		INSERT INTO movements_form_submissions (
+			allowed_respondent_key_id,
 			birthday,
 			gender,
 			social_status_id,
@@ -97,15 +111,16 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 			$5,
 			$6,
 			$7,
+			$8,
 			CASE
-				WHEN $8::text IS NULL THEN NULL
-				ELSE ST_SetSRID(ST_GeomFromGeoJSON($8::text), 4326)
+				WHEN $9::text IS NULL THEN NULL
+				ELSE ST_SetSRID(ST_GeomFromGeoJSON($9::text), 4326)
 			END,
-			$9,
-			$10
+			$10,
+			$11
 		)
 		RETURNING id
-	`, in.Birthday, in.Gender, socialStatusID, in.TransportCostMin, in.TransportCostMax, in.IncomeMin, in.IncomeMax, nullableGeoJSONText(in.HomeAddress.GeoJSON), nullableString(in.HomeAddress.Readable), in.MovementsDate).Scan(&submissionID)
+	`, allowedRespondentKeyID, in.Birthday, in.Gender, socialStatusID, in.TransportCostMin, in.TransportCostMax, in.IncomeMin, in.IncomeMax, nullableGeoJSONText(in.HomeAddress.GeoJSON), nullableString(in.HomeAddress.Readable), in.MovementsDate).Scan(&submissionID)
 	if err != nil {
 		return 0, fmt.Errorf("insert submission: %w", err)
 	}
@@ -227,6 +242,25 @@ func loadRefIDs(ctx context.Context, tx pgx.Tx, table string) (map[string]int64,
 		return nil, fmt.Errorf("iterate reference rows %s: %w", table, rows.Err())
 	}
 	return result, nil
+}
+
+func lookupActiveRespondentKeyID(ctx context.Context, tx pgx.Tx, respondentKey string) (*int64, error) {
+	var id int64
+	err := tx.QueryRow(
+		ctx,
+		`SELECT id
+		FROM allowed_respondent_keys
+		WHERE respondent_key = $1
+		  AND is_active = TRUE`,
+		respondentKey,
+	).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("active respondent key not found: %s", respondentKey)
+		}
+		return nil, fmt.Errorf("lookup respondent key id: %w", err)
+	}
+	return &id, nil
 }
 
 func nullableString(value string) any {
