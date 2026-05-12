@@ -50,6 +50,11 @@ db-bootstrap:
   docker compose build bootstrap
   docker compose run --rm bootstrap
 
+osm-admin-import pbf="data/russia-260510.osm.pbf":
+  docker compose up -d postgres
+  docker compose build osm-admin-import
+  docker compose run --rm -e PBF_PATH="/work/{{pbf}}" osm-admin-import
+
 bootstrap:
   docker compose build bootstrap
   docker compose run --rm bootstrap

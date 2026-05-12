@@ -1,0 +1,20 @@
+ARG IMPOSM_VERSION=v0.14.2
+
+FROM golang:1.26-alpine AS imposm-builder
+ARG IMPOSM_VERSION
+
+RUN apk add --no-cache build-base geos-dev git leveldb-dev
+RUN GOBIN=/out go install github.com/omniscale/imposm3/cmd/imposm@${IMPOSM_VERSION}
+
+FROM postgres:18-alpine
+
+WORKDIR /work
+
+RUN apk add --no-cache geos leveldb libstdc++
+
+COPY --from=imposm-builder /out/imposm /usr/local/bin/imposm
+COPY scripts/osm-admin-import.sh /usr/local/bin/osm-admin-import.sh
+
+RUN chmod +x /usr/local/bin/osm-admin-import.sh
+
+ENTRYPOINT ["/usr/local/bin/osm-admin-import.sh"]

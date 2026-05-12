@@ -5,3 +5,6 @@
 bin
 coverage.out
 *.log
+backups
+exports
+data/*.osm.pbf

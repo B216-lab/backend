@@ -25,6 +25,23 @@ services:
       postgres:
         condition: service_healthy
 
+  osm-admin-import:
+    build:
+      context: .
+      dockerfile: Dockerfile.osm-import
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-umrs}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-umrs_go_backend}?sslmode=disable
+      PBF_PATH: /work/data/russia-260510.osm.pbf
+      MAPPING_FILE: /work/osm/imposm-admin-mapping.yml
+      POST_IMPORT_SQL: /work/scripts/load_osm_admin.sql
+      CACHE_DIR: /tmp/imposm-cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/work
+      - imposm-cache:/tmp/imposm-cache
+
   app:
     build:
       context: .
@@ -46,3 +63,4 @@ services:
 
 volumes:
   postgres-data:
+  imposm-cache:

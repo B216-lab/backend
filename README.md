@@ -1,21 +1,6 @@
 # UMRS Go Backend
 
-Lightweight Go backend for movements form ingestion.
-
-## Public API
-
-- `POST /api/v1/public/forms/movements`
-- `POST /v1/public/forms/movements` (compat alias)
-- `GET /healthz`
-
 ## Local Development
-
-### Prerequisites
-
-- Go 1.26+
-- `just`
-- Docker + Docker Compose
-- Optional: `pre-commit`
 
 ### Bootstrap
 
@@ -26,34 +11,6 @@ pre-commit install
 ```
 
 Goose and Postgres CLI tooling run via Docker in this repository, so you do not need local installs for them.
-
-### Core Commands
-
-```bash
-just migrate-status
-just migrate-up
-just migrate-down
-just migrate-redo
-just migrate-create add_new_feature
-just db-seed
-just db-bootstrap
-just fmt
-just fmt-check
-just test
-just vet
-just build
-just check
-```
-
-### Run with Docker Compose
-
-```bash
-just up
-curl --fail http://localhost:8081/healthz
-just down
-```
-
-`just up` starts PostgreSQL, applies Goose migrations, loads `db/seed.sql`, and then starts the API.
 
 ## Schema Workflow
 
@@ -76,7 +33,43 @@ Typical change flow:
 just docker-smoke
 ```
 
-## Devcontainer
+## Administrative Boundary Import
 
-The repository includes a compose-based devcontainer configuration in `.devcontainer/`.
-It brings up PostgreSQL plus a development container with Go, `just`, and `pre-commit`.
+This repository can import only Russian administrative boundaries from an OSM `.pbf` into the same PostGIS database without loading the default heavy `planet_osm_*` schema.
+
+What it does:
+
+- uses `imposm3` with a mapping that only keeps `boundary=administrative` polygons
+- loads the raw import into disposable schemas
+- copies normalized data into `osm_admin.boundaries`
+- exposes convenience views for `federal_subjects`, `administrative_districts`, `cities`, and `local_areas`
+
+Run it against the bundled Russia extract:
+
+```bash
+just migrate-up
+just osm-admin-import
+```
+
+Use a different `.pbf` file under the backend working tree:
+
+```bash
+just osm-admin-import pbf=data/another-russia-extract.osm.pbf
+```
+
+After import, example queries:
+
+```sql
+SELECT name, admin_level
+FROM osm_admin.cities
+WHERE name ILIKE 'Новосибирск';
+
+SELECT name, admin_level, parent_osm_id
+FROM osm_admin.local_areas
+WHERE parent_osm_id = (
+  SELECT osm_id
+  FROM osm_admin.cities
+  WHERE name = 'Новосибирск'
+  LIMIT 1
+);
+```

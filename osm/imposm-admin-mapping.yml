@@ -1,0 +1,32 @@
+tables:
+  admin_boundaries:
+    type: polygon
+    relation_types: [boundary]
+    mapping:
+      boundary: [administrative]
+    columns:
+      - name: osm_id
+        type: id
+      - name: geometry
+        type: geometry
+      - key: name
+        name: name
+        type: string
+      - key: "name:ru"
+        name: name_ru
+        type: string
+      - key: "name:en"
+        name: name_en
+        type: string
+      - key: admin_level
+        name: admin_level
+        type: string
+      - key: place
+        name: place
+        type: string
+      - key: boundary
+        name: boundary
+        type: string
+      - key: wikidata
+        name: wikidata
+        type: string
