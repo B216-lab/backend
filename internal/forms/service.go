@@ -232,7 +232,7 @@ func normalizeMovement(in MovementInput, movementDate time.Time, idx int) (Movem
 
 	if in.WaitAtStartMinutes != nil {
 		movement.WaitingTime = in.WaitAtStartMinutes
-	} else if value := strings.TrimSpace(in.WaitBetweenTransfersMinutes); value != "" {
+	} else if value := strings.TrimSpace(in.WaitBetweenTransfersMinutes.String()); value != "" {
 		parsedWaiting, parseErr := strconv.Atoi(value)
 		if parseErr == nil {
 			movement.WaitingTime = &parsedWaiting
@@ -295,10 +295,11 @@ func normalizeAddress(in AddressInput) Address {
 		return address
 	}
 
-	if in.Latitude != nil && in.Longitude != nil {
+	latitude, longitude := addressCoordinates(in)
+	if latitude != nil && longitude != nil {
 		geo := map[string]any{
 			"type":        "Point",
-			"coordinates": []float64{*in.Longitude, *in.Latitude},
+			"coordinates": []float64{*longitude, *latitude},
 		}
 		serialized, err := json.Marshal(geo)
 		if err == nil {
@@ -307,6 +308,36 @@ func normalizeAddress(in AddressInput) Address {
 	}
 
 	return address
+}
+
+func addressCoordinates(in AddressInput) (*float64, *float64) {
+	if in.Latitude != nil && in.Longitude != nil {
+		return in.Latitude, in.Longitude
+	}
+
+	if in.Data == nil {
+		return nil, nil
+	}
+
+	latitude, latOK := parseOptionalCoordinate(in.Data.GeoLat.String())
+	longitude, lonOK := parseOptionalCoordinate(in.Data.GeoLon.String())
+	if !latOK || !lonOK {
+		return nil, nil
+	}
+	return &latitude, &longitude
+}
+
+func parseOptionalCoordinate(raw string) (float64, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return 0, false
+	}
+
+	parsed, err := strconv.ParseFloat(trimmed, 64)
+	if err != nil {
+		return 0, false
+	}
+	return parsed, true
 }
 
 func firstNonEmptyGeoJSON(in AddressInput) []byte {

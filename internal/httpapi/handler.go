@@ -38,9 +38,10 @@ func (h *Handler) SubmitMovementsForm(w http.ResponseWriter, r *http.Request) {
 	var req forms.SubmissionInput
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
+		log.Printf("decode movements form request failed: %v", err)
 		writeJSON(w, http.StatusBadRequest, map[string]any{
 			"error":   "Bad Request",
-			"message": "invalid JSON body",
+			"message": "invalid JSON body: " + err.Error(),
 		})
 		return
 	}
@@ -55,6 +56,7 @@ func (h *Handler) SubmitMovementsForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		log.Printf("submit movements form failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
 			"error":   "Internal Server Error",
 			"message": "failed to process submission",

@@ -90,6 +90,27 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 
 	var submissionID int64
 	err = tx.QueryRow(ctx, `
+		WITH submission_input AS (
+			SELECT
+				CASE
+					WHEN $9::text IS NULL THEN NULL
+					ELSE ST_SetSRID(ST_GeomFromGeoJSON($9::text), 4326)
+				END AS home_address
+		),
+		home_city AS (
+			SELECT
+				c.osm_id AS city_id,
+				COALESCE(c.name_ru, c.name, c.name_en) AS city_name
+			FROM submission_input si
+			JOIN LATERAL (
+				SELECT c.osm_id, c.name_ru, c.name, c.name_en
+				FROM osm_admin.cities c
+				WHERE si.home_address IS NOT NULL
+				  AND ST_Covers(c.geom, si.home_address)
+				ORDER BY c.admin_level ASC, ST_Area(c.geom::geography) ASC
+				LIMIT 1
+			) c ON TRUE
+		)
 		INSERT INTO movements_form_submissions (
 			allowed_respondent_key_id,
 			birthday,
@@ -100,10 +121,12 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 			income_min,
 			income_max,
 			home_address,
+			home_city_id,
+			home_city_name,
 			home_readable_address,
 			movements_date
 		)
-		VALUES (
+		SELECT
 			$1,
 			$2,
 			$3,
@@ -112,13 +135,13 @@ func (r *Repository) Submit(ctx context.Context, in forms.Submission) (int, erro
 			$6,
 			$7,
 			$8,
-			CASE
-				WHEN $9::text IS NULL THEN NULL
-				ELSE ST_SetSRID(ST_GeomFromGeoJSON($9::text), 4326)
-			END,
+			si.home_address,
+			hc.city_id,
+			hc.city_name,
 			$10,
 			$11
-		)
+		FROM submission_input si
+		LEFT JOIN home_city hc ON TRUE
 		RETURNING id
 	`, allowedRespondentKeyID, in.Birthday, in.Gender, socialStatusID, in.TransportCostMin, in.TransportCostMax, in.IncomeMin, in.IncomeMax, nullableGeoJSONText(in.HomeAddress.GeoJSON), nullableString(in.HomeAddress.Readable), in.MovementsDate).Scan(&submissionID)
 	if err != nil {

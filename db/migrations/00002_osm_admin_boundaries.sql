@@ -38,7 +38,11 @@ WHERE admin_level IN (5, 6);
 CREATE OR REPLACE VIEW osm_admin.cities AS
 SELECT *
 FROM osm_admin.boundaries
-WHERE admin_level IN (7, 8);
+WHERE boundary = 'administrative'
+  AND (
+    (admin_level IN (6, 7) AND name IS NOT NULL)
+    OR name_en = 'Moscow'
+  );
 
 CREATE OR REPLACE VIEW osm_admin.local_areas AS
 SELECT *
